@@ -1,21 +1,37 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.engine.matcher import analyze_text
+from app.core.meter import analyze_poem_line, list_weights
 
 app = FastAPI(title="Iraqi Poetry Meter")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-class AnalyzeReq(BaseModel):
-    text: str
+# ✅ API routes FIRST
+@app.get("/api/weights")
+def api_weights():
+    return {"ok": True, "weights": list_weights()}
 
-@app.get("/")
-def home():
-    return FileResponse("static/index.html")
 
 @app.post("/api/analyze")
-def analyze(req: AnalyzeReq):
-    return analyze_text(req.text)
+async def api_analyze(payload: dict):
+    text = (payload.get("text") or "").strip()
+    if not text:
+        return {
+            "ok": False,
+            "error": "empty_input",
+            "message": "اكتب بيت/شطر واحد على الأقل."
+        }
+
+    return analyze_poem_line(text)
+
+
+# ✅ Static mount LAST (IMPORTANT)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

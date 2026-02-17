@@ -3,20 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ميزان الشعر الشعبي</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <title>ميزان الشعر الشعبي العراقي</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="wrap">
+  <main class="wrap">
     <h1>ميزان الشعر الشعبي العراقي</h1>
 
-    <textarea id="txt" placeholder="اكتب البيت هنا..."></textarea>
-    <button id="btn">تحليل الوزن</button>
+    <textarea id="poemInput" placeholder="اكتب البيت هنا..."></textarea>
 
-    <pre id="out"></pre>
-    <p class="note">إذا لم يطابق البيت القواعد المدعومة حاليًا، ستظهر رسالة “غير مطابق”.</p>
-  </div>
+    <div class="row">
+      <button id="analyzeBtn">تحليل الوزن</button>
+      <button id="clearBtn" class="secondary">مسح</button>
+    </div>
 
-  <script src="/static/app.js"></script>
+    <section id="result" class="result hidden"></section>
+
+    <p class="hint" id="hintText">
+      إذا لم يطابق البيت القواعد المدعومة حالياً ستظهر رسالة "غير مطابق".
+    </p>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>
