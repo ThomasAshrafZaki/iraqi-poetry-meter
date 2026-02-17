@@ -44,18 +44,19 @@ analyzeBtn.addEventListener("click", async () => {
     }
 
     if (!data.matched) {
+      // استخدام "غير متعارف" بدلاً من "غير مطابق"
       showResult(`
-        <div><b>غير مطابق</b></div>
-        <div>الثقة: <b>${data.confidence}</b></div>
+        <div><b>غير متعارف</b></div>
+        <div>التشابه: <b>${data.similarity}</b></div>
         <div style="margin-top:8px;color:#555">${data.message || ""}</div>
       `);
       return;
     }
 
+    // تم إزالة سطر التفعيلات تماماً
     showResult(`
       <div><b>الوزن:</b> ${data.weight}</div>
-      <div><b>التفعيلات:</b> ${data.taf3eelat || "-"}</div>
-      <div><b>الثقة:</b> ${data.confidence}</div>
+      <div><b>التشابه:</b> ${data.similarity}</div>
       <hr />
       <div><b>أقرب مثال:</b></div>
       <div style="color:#333">${data.closest_example}</div>

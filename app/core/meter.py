@@ -17,12 +17,10 @@ from app.core.similarity import (
 )
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-# تغيير المسار إلى JSON
 _DATA_PATH = os.path.join(os.path.dirname(_THIS_DIR), "data", "examples.json")
 _EXAMPLES_CACHE: Optional[Dict[str, Any]] = None
 
 def _load_examples() -> Dict:
-    """تحميل الأمثلة من ملف JSON."""
     global _EXAMPLES_CACHE
     if _EXAMPLES_CACHE is not None:
         return _EXAMPLES_CACHE
@@ -33,10 +31,8 @@ def _load_examples() -> Dict:
     with open(_DATA_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # التأكد من وجود الحقول المطلوبة
+    # لاحظ: لم نعد نستخدم حقل taf3eelat، لكن نتركه في البيانات للتوافق إن وجد
     for weight, info in data.items():
-        if "taf3eelat" not in info:
-            info["taf3eelat"] = ""
         if "examples" not in info or not isinstance(info["examples"], list):
             info["examples"] = []
 
@@ -55,7 +51,6 @@ def _flatten_candidates(data: Dict) -> List[Tuple[str, str]]:
     return candidates
 
 def _build_weight_profiles(data: Dict) -> Dict[str, str]:
-    """بناء نص مركب لكل وزن (يجمع كل أمثلته) لمقارنة TF-IDF."""
     profiles = {}
     for weight, info in data.items():
         examples = [ex.strip() for ex in info.get("examples", []) if isinstance(ex, str) and ex.strip()]
@@ -64,11 +59,6 @@ def _build_weight_profiles(data: Dict) -> Dict[str, str]:
     return profiles
 
 def _exact_match(text: str, candidates: List[Tuple[str, str]]) -> Tuple[bool, str, str]:
-    """
-    تطابق تام على مرحلتين:
-    1. deep=False (تطبيع خفيف)
-    2. deep=True (تطبيع عميق) كـ fallback
-    """
     # المرحلة الأولى: deep=False
     norm_input_light = normalize_arabic(text, deep=False)
     compact_light = re.sub(r'\s+', '', norm_input_light)
@@ -78,13 +68,12 @@ def _exact_match(text: str, candidates: List[Tuple[str, str]]) -> Tuple[bool, st
         compact_light_ex = re.sub(r'\s+', '', norm_ex_light)
         if compact_light == compact_light_ex:
             return True, w, ex
-        # تشابه عالٍ جداً
         if abs(len(compact_light) - len(compact_light_ex)) <= 2:
             sim = levenshtein_ratio(compact_light, compact_light_ex)
             if sim > 0.95:
                 return True, w, ex
 
-    # المرحلة الثانية: deep=True (تجربة التطبيع العميق)
+    # المرحلة الثانية: deep=True
     norm_input_deep = normalize_arabic(text, deep=True)
     compact_deep = re.sub(r'\s+', '', norm_input_deep)
 
@@ -115,47 +104,43 @@ def analyze_poem_line(text: str) -> Dict:
     # 1. تطابق تام
     exact, w, ex = _exact_match(text, candidates)
     if exact:
-        info = data.get(w, {})
         return {
             "ok": True,
             "matched": True,
             "input": text,
             "normalized": normalize_arabic(text, deep=False),
             "weight": w,
-            "taf3eelat": info.get("taf3eelat", ""),
-            "confidence": 1.0,
+            "similarity": 1.0,          # <-- هنا التشابه
             "closest_example": ex,
             "method": "exact_match"
         }
 
-    # 2. تجهيز TfidfVectorizer على كل الأمثلة
+    # 2. تجهيز TfidfVectorizer
     all_examples = [ex for _, ex in candidates]
     vectorizer = TfidfVectorizer(all_examples) if all_examples else None
 
     # 3. بحث أفضل تطابق
     best = find_best_match(text, candidates, weight_profiles, vectorizer)
 
-    # 4. عتبة ثقة ديناميكية
-    confidence = best.score
-    if confidence < 0.3:
+    # 4. عتبة تشابه ديناميكية
+    similarity = best.score
+    if similarity < 0.3:
         return {
             "ok": True,
             "matched": False,
             "input": text,
             "normalized": normalize_arabic(text, deep=False),
-            "confidence": round(confidence, 3),
+            "similarity": round(similarity, 3),
             "message": "البيت بعيد عن جميع الأوزان المدعومة حالياً. يرجى إضافة أمثلة أقرب."
         }
 
-    info = data.get(best.weight, {})
     return {
         "ok": True,
         "matched": True,
         "input": text,
         "normalized": normalize_arabic(text, deep=False),
         "weight": best.weight,
-        "taf3eelat": info.get("taf3eelat", ""),
-        "confidence": round(confidence, 3),
+        "similarity": round(similarity, 3),
         "closest_example": best.example,
         "method": best.method
     }
